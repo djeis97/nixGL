@@ -76,7 +76,7 @@ let
           inherit version;
           src = let
             url =
-              "https://download.nvidia.com/XFree86/Linux-aarch64/${version}/NVIDIA-Linux-aarch64-${version}.run";
+              "https://download.nvidia.com/XFree86/aarch64/${version}/NVIDIA-Linux-aarch64-${version}.run";
           in if sha256 != null then
             fetchurl { inherit url sha256; }
           else
