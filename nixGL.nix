@@ -76,7 +76,10 @@ let
           inherit version;
           src = let
             url =
-              "https://download.nvidia.com/XFree86/Linux-x86_64/${version}/NVIDIA-Linux-x86_64-${version}.run";
+              if stdenv.isx86_64 then
+                "https://download.nvidia.com/XFree86/Linux-x86_64/${version}/NVIDIA-Linux-x86_64-${version}.run"
+              else
+                "https://us.download.nvidia.com/XFree86/aarch64/${version}/NVIDIA-Linux-aarch64-${version}.run";
           in if sha256 != null then
             fetchurl { inherit url sha256; }
           else
@@ -234,8 +237,8 @@ let
       # Get if from the nvidiaVersionFile
         let
           data = builtins.readFile _nvidiaVersionFile;
-          versionMatch = builtins.match ".*Module  ([0-9.]+)  .*" data;
-        in if versionMatch != null then builtins.head versionMatch else null;
+          versionMatch = builtins.match ".*Module( for aarch64)?  ([0-9.]+)  .*" data;
+        in if versionMatch != null then builtins.head (builtins.tail versionMatch) else null;
 
       autoNvidia = nvidiaPackages {version = nvidiaVersionAuto; };
     in rec {
