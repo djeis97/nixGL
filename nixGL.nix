@@ -16,7 +16,7 @@ enable32bits ? stdenv.hostPlatform.isx86
 , stdenv, writeTextFile, shellcheck, pcre, runCommand, linuxPackages
 , fetchurl, lib, runtimeShell, bumblebee, libglvnd, vulkan-validation-layers
 , mesa, libvdpau-va-gl, intel-media-driver, pkgsi686Linux, driversi686Linux
-, zlib, libdrm, xorg, wayland, gcc, zstd }:
+, zlib, libdrm, xorg, wayland, gcc, zstd, fetchFromGitHub }:
 
 let
   writeExecutable = { name, text }:
@@ -66,7 +66,7 @@ let
   top = rec {
     /*
     It contains the builder for different nvidia configuration, parametrized by
-    the version of the driver and sha256 sum of the driver installer file.
+    the version of the driver.
     */
     nvidiaPackages = { version, sha256 ? null }: rec {
       nvidiaDrivers = (linuxPackages.nvidia_x11.override { }).overrideAttrs
@@ -75,15 +75,38 @@ let
           name = "nvidia-x11-${version}-nixGL";
           inherit version;
           src = let
-            url =
-              if stdenv.isx86_64 then
-                "https://download.nvidia.com/XFree86/Linux-x86_64/${version}/NVIDIA-Linux-x86_64-${version}.run"
-              else
-                "https://us.download.nvidia.com/XFree86/aarch64/${version}/NVIDIA-Linux-aarch64-${version}.run";
-          in if sha256 != null then
-            fetchurl { inherit url sha256; }
-          else
-            builtins.fetchurl url;
+            flatpak_driver_urls = fetchFromGitHub {
+              owner = "flathub";
+              repo = "org.freedesktop.Platform.GL.nvidia";
+              rev = "76619c4746d7fbe898c00e657bd0fe157121ed82";
+              hash = "sha256-j4c9RLkHaxY0fODRllucKm2V3NsVUGKOmifyOU2LGa4=";
+            };
+            dataFile =
+              flatpak_driver_urls
+              + /data
+              + "/nvidia-"
+              + version
+              + (
+                if stdenv.isx86_64
+                then "-x86_64.data"
+                else if stdenv.isAarch64
+                then "-aarch64.data"
+                else if stdenv.isi686
+                then "-i386.data"
+                else "-unsupported"
+              );
+            readDataFile = (
+              path: let
+                info = lib.strings.splitString "::" (builtins.readFile path);
+              in {
+                url = lib.lists.last info;
+                sha256 = lib.lists.elemAt (lib.strings.splitString ":" (builtins.head info)) 1;
+              }
+            );
+          in
+            if builtins.pathExists dataFile
+            then fetchurl (readDataFile dataFile)
+            else builtins.fetchurl "https://download.nvidia.com/XFree86/Linux-x86_64/${version}/NVIDIA-Linux-x86_64-${version}.run";
           useGLVND = true;
           nativeBuildInputs = oldAttrs.nativeBuildInputs or [] ++ [zstd];
         });
