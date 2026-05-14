@@ -16,7 +16,7 @@ enable32bits ? stdenv.hostPlatform.isx86
 , stdenv, writeTextFile, shellcheck, pcre, runCommand, linuxPackages
 , fetchurl, lib, runtimeShell, bumblebee, libglvnd, vulkan-validation-layers
 , mesa, libvdpau-va-gl, intel-media-driver, pkgsi686Linux, driversi686Linux
-, zlib, libdrm, xorg, wayland, gcc, zstd, fetchFromGitHub }:
+, zlib, libdrm, libx11, libxcb, libxshmfence, wayland, gcc, zstd, fetchFromGitHub }:
 
 let
   writeExecutable = { name, text }:
@@ -113,7 +113,6 @@ let
 
       nvidiaLibsOnly = nvidiaDrivers.override {
         libsOnly = true;
-        kernel = null;
       };
 
       nixGLNvidiaBumblebee = writeExecutable {
@@ -215,9 +214,9 @@ let
           lib.makeLibraryPath [
             zlib
             libdrm
-            xorg.libX11
-            xorg.libxcb
-            xorg.libxshmfence
+            libx11
+            libxcb
+            libxshmfence
             wayland
             gcc.cc
           ]
