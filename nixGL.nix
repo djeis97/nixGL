@@ -78,8 +78,8 @@ let
             flatpak_driver_urls = fetchFromGitHub {
               owner = "flathub";
               repo = "org.freedesktop.Platform.GL.nvidia";
-              rev = "76619c4746d7fbe898c00e657bd0fe157121ed82";
-              hash = "sha256-j4c9RLkHaxY0fODRllucKm2V3NsVUGKOmifyOU2LGa4=";
+              rev = "c28d5d640b480569a7ab6dd37d5138d71e9bc4d6";
+              hash = "sha256-PJRh6LcLtCfcTHPevTXnbNf8V/b96UBzzhxM2NkqlqQ=";
             };
             dataFile =
               flatpak_driver_urls
@@ -97,16 +97,20 @@ let
               );
             readDataFile = (
               path: let
-                info = lib.strings.splitString "::" (builtins.readFile path);
+                info = lib.strings.splitString "::" (lib.removeSuffix "\n" (builtins.readFile path));
               in {
                 url = lib.lists.last info;
                 sha256 = lib.lists.elemAt (lib.strings.splitString ":" (builtins.head info)) 1;
               }
             );
-          in
-            if builtins.pathExists dataFile
-            then fetchurl (readDataFile dataFile)
-            else builtins.fetchurl "https://download.nvidia.com/XFree86/Linux-x86_64/${version}/NVIDIA-Linux-x86_64-${version}.run";
+          in (fetchurl
+            (if builtins.pathExists dataFile
+             then readDataFile dataFile
+             else
+               if stdenv.isx86_64 then
+                 "https://download.nvidia.com/XFree86/Linux-x86_64/${version}/NVIDIA-Linux-x86_64-${version}.run"
+               else
+                 "https://us.download.nvidia.com/XFree86/aarch64/${version}/NVIDIA-Linux-aarch64-${version}.run"));
           useGLVND = true;
           nativeBuildInputs = oldAttrs.nativeBuildInputs or [] ++ [zstd];
         });
